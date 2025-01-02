@@ -1,64 +1,96 @@
-
-from config import populate_sub_category
-
-# Helper functions
-def append_component(sub_category_data, component_type, name, category, data):
-    sub_category_data["components"].append({
-        "componentType": component_type,
-        "ComponentName": name,
-        "ComponentCategory": category,
-        "ComponentData": data
-    })
-
-def find_or_create_category(categories, category_name):
-    for cat in categories:
-        if cat["categoryName"] == category_name:
-            return cat
-    new_category = {"categoryName": category_name, "subCategories": []}
-    categories.append(new_category)
-    return new_category
-
-# Construct the component_fixed dictionary dynamically
-component_fixed = {
-    "eci": llm_output.get("eci", ""),
-    "package_id": llm_output.get("package_id", ""),
-    "agent": llm_output.get("agent", ""),
-    "status_code": llm_output.get("status_code", 0),
-    "categories": []
+# Sub-category configuration mapping
+sub_category_config = {
+    "Wealth Plan current scenario": [
+        {
+            "componentType": "tile",
+            "ComponentName": "asset_details",
+            "ComponentCategory": "Summaries",
+            "ComponentDataKey": "assest_details_tile",
+        },
+        {
+            "componentType": "tile_list",
+            "ComponentName": "goals",
+            "ComponentCategory": "Goals",
+            "ComponentDataKey": "goals",
+        },
+    ],
+    "Net Worth": [
+        {
+            "componentType": "table",
+            "ComponentName": "account_details",
+            "ComponentCategory": "Summaries",
+            "ComponentDataKey": "account_details",
+        },
+    ],
+    "Wealth plan future inflows": [
+        {
+            "componentType": "tile",
+            "ComponentName": "expected inflows and contributions",
+            "ComponentCategory": "Summaries",
+            "ComponentDataKey": "expected_inflows_and_contributions",
+        },
+        {
+            "componentType": "table",
+            "ComponentName": "future inflow details",
+            "ComponentCategory": "Tables",
+            "ComponentDataKey": "future_inflow_details",
+        },
+    ],
+    "Entity Affiliation": [
+        {
+            "componentType": "table",
+            "ComponentName": "entity_affiliation",
+            "ComponentCategory": "Tables",
+            "ComponentDataKey": "entity_affiliation",
+        },
+    ],
 }
 
-if llm_output["status_code"] == 200:
-    for plan_result in llm_output.get("plan_level_results", []):
-        category = find_or_create_category(component_fixed["categories"], plan_result.get("category", ""))
-        sub_category_data = {
-            "subCategoryName": plan_result.get("sub_category", ""),
-            "components": []
-        }
-
-        # Add Insights
-        for insight in plan_result.get("Insights", []):
-            append_component(
-                sub_category_data,
-                "text",
-                "model_insight",
-                "Considerations",
-                [{"displayText": insight.get("Insight", "")}]
-            )
-
-        # Add Summaries
-        for summary in plan_result.get("summaries", []):
-            append_component(
-                sub_category_data,
-                "text",
-                "model_summary",
-                "Summaries",
-                [{"displayText": summary.get("summary", "")}]
-            )
-
-        # Populate sub-category components using config
-        populate_sub_category(sub_category_data, append_component)
-
-        # Append the subcategory to the category
-        category["subCategories"].append(sub_category_data)
-
-    print(json.dumps(component_fixed, indent=4))
+# Data configurations for tiles, tables, and other data components
+assest_details_tile = [{' Plan Assets': 0, 'Current Assets': 0, 'Future Assets': 0}]
+goals = [
+    {
+        'Name': 'Retirement',
+        'Target Amount': 6000.0,
+        'Gap Amount': 0,
+        'Start Year': 2025,
+        'End Year': 2041,
+        'Check In': 0,
+        'Rank': 1,
+        'Total Goals': 2,
+    },
+    {
+        'Name': 'Excess capital',
+        'Target Amount': 0,
+        'Gap Amount': 0,
+        'Start Year': 2024,
+        'End Year': 2041,
+        'Check In': 0,
+        'Rank': 2147483647,
+        'Total Goals': 2,
+    },
+]
+account_details = [
+    {'Name': 'Bank accounts', 'External': 0, 'JPMC': 60569.97, 'Total': 60569.97, 'flag_type': 'Assets'},
+    {'Name': 'Investment accounts', 'External': 31648.15, 'JPMC': 74321.08, 'Total': 105969.23, 'flag_type': 'Assets'},
+    {'Name': 'Other Assets', 'External': 74321.08, 'JPMC': 31648.15, 'Total': 105969.23, 'flag_type': 'Assets'},
+    {'Name': 'Liabilities', 'External': 0, 'JPMC': 17411.98, 'Total': 17411.98, 'flag_type': 'Liabilities'},
+]
+expected_inflows_and_contributions = [
+    {'Total Future Contributions Expected': 0, 'Total Future Inflows Expected': 0}
+]
+future_inflow_details = [
+    {
+        "inflow": "small business income",
+        "start_year": 2022,
+        "end_year": 2024,
+        "expected_income": 120000.0,
+    },
+    {
+        "inflow": "401(k)",
+        "start_year": 2026,
+        "end_year": 2043,
+        "expected_income": 23000.0,
+    },
+]
+entity_affiliation = [{"Entity Name": '', "Relationship": ''}]
