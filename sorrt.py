@@ -1,8 +1,20 @@
+import json
+from config import *
+# Define llm_output
+
+
 
 def process_data(llm_output,input_list):
 
-    
-    
+    if len(input_list) < 8:
+        raise ValueError("input_list must contain at least 8 elements.")
+    if not isinstance(input_list, list):
+        raise TypeError("input_list must be a list.")
+    if not llm_output:
+        return {"eci": "", "package_id": "", "agent": "", "status_code": 500, "categories": []}
+    # Rest of the logic
+    if not llm_output.get("plan_level_results") and not llm_output.get("goal_level_results"):
+        return {"status_code": 200, "categories": []}
     data_mapping = {
         "assest_details_tile": input_list[1],
         "goals": input_list[2],
