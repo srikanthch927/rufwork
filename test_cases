@@ -1,0 +1,121 @@
+import unittest
+
+class TestProcessData(unittest.TestCase):
+    def setUp(self):
+        self.llm_output = {
+            "eci": "0449828929",
+            "package_id": "c8c2e71d",
+            "agent": "WealthPlan v3.5 GPT",
+            "status_code": 200,
+            "plan_level_results": [
+                {
+                    "category": "Financial Review",
+                    "sub_category": "Wealth plan future inflows",
+                    "summaries": [
+                        {"scenario": "advisor or client led plan", "summary": "in plan level", "lrcc_valid": True}
+                    ],
+                    "Insights": []
+                }
+            ],
+            "goal_level_results": [
+                {
+                    "category": "Financial Review",
+                    "sub_category": "Wealth plan future inflows",
+                    "summaries": [
+                        {"scenario": "advisor or client led plan", "summary": "in goal level", "lrcc_valid": True}
+                    ],
+                    "Insights": [{"scenario": "advisor or client led plan", "Insight": "in goal level insights"}]
+                }
+            ]
+        }
+
+        self.input_list = [
+            {},  # Placeholder for unused index 0
+            [{"Plan Assets": 0, "Current Assets": 0, "Future Assets": 0}],
+            [{"Name": "Retirement", "Target Amount": 6000.0, "Gap Amount": 0}],
+            [{"Name": "Bank accounts", "Total": 60569.97, "flag_type": "Assets"}],
+            [{"Total Future Contributions Expected": 0}],
+            [{"inflow": "small business income", "expected_income": 120000.0}],
+            [{"Entity Name": "", "Relationship": ""}],
+            [{"name": "rebeca", "relationship": "client"}]
+        ]
+
+    def test_valid_data(self):
+        from components import process_data
+        result = process_data(self.llm_output, self.input_list)
+        self.assertEqual(result["status_code"], 200)
+        self.assertIn("categories", result)
+        self.assertGreater(len(result["categories"]), 0)
+
+    def test_empty_llm_output(self):
+        from components import process_data
+
+        empty_llm_output = {}
+        result = process_data(empty_llm_output, self.input_list)
+        self.assertEqual(result["status_code"], 500)
+        self.assertEqual(len(result["categories"]), 0)
+
+
+    def test_empty_input_list(self):
+        from components import process_data
+        with self.assertRaises(ValueError) as context:
+            process_data(self.llm_output, [])
+        self.assertEqual(str(context.exception), "input_list must contain at least 8 elements.")
+
+
+    def test_partial_input_list(self):
+        from components import process_data
+
+        partial_input_list = self.input_list[:5]  # Incomplete input list
+        with self.assertRaises(ValueError) as context:
+            process_data(self.llm_output, partial_input_list)
+        self.assertEqual(str(context.exception), "input_list must contain at least 8 elements.")
+
+    def test_no_categories_created(self):
+        from components import process_data
+        llm_output_with_no_results = {
+            "eci": "0449828929",
+            "package_id": "c8c2e71d",
+            "agent": "WealthPlan v3.5 GPT",
+            "status_code": 200,
+            "plan_level_results": [],
+            "goal_level_results": []
+        }
+        result = process_data(llm_output_with_no_results, self.input_list)
+        self.assertEqual(result["status_code"], 200)
+        self.assertEqual(len(result["categories"]), 0)  # Ensure no categories are added
+
+
+    def test_duplicate_components(self):
+        from components import process_data
+        duplicate_llm_output = self.llm_output.copy()
+        duplicate_llm_output["goal_level_results"].append(duplicate_llm_output["goal_level_results"][0])
+        result = process_data(duplicate_llm_output, self.input_list)
+        category = result["categories"][0]
+        sub_category = category["subCategories"][0]
+        components = sub_category["components"]
+        self.assertEqual(len(components), len(set((c["ComponentName"], c["ComponentCategory"]) for c in components)))
+
+    def test_invalid_llm_output_format(self):
+        from components import process_data
+        invalid_llm_output = {"status_code": 200, "plan_level_results": "not a list"}
+        result = process_data(invalid_llm_output, self.input_list)
+        self.assertEqual(result["status_code"], 500)
+
+    def test_missing_sub_category(self):
+        from components import process_data
+        missing_sub_category_llm_output = self.llm_output.copy()
+        missing_sub_category_llm_output["goal_level_results"][0].pop("sub_category")
+        result = process_data(missing_sub_category_llm_output, self.input_list)
+        self.assertEqual(result["status_code"], 200)
+
+    def test_invalid_input_list_format(self):
+        from components import process_data
+        invalid_input_list = "not a list"
+        with self.assertRaises(TypeError) as context:
+            process_data(self.llm_output, invalid_input_list)
+        self.assertEqual(str(context.exception), "input_list must be a list.")
+
+
+if __name__ == "__main__":
+    unittest.main()
