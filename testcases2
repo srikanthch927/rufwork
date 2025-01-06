@@ -1,0 +1,109 @@
+import unittest
+from datetime import date, datetime
+from components import (
+    append_component, 
+    find_or_create_category, 
+    find_or_create_sub_category, 
+    populate_directly_mapped_data, 
+    append_unique_component, 
+    populate_sub_category_unique, 
+    construct_component_fixed_unique, 
+    process_llm_output_data
+)
+
+class TestLLMOutputProcessing(unittest.TestCase):
+    def setUp(self):
+        self.categories = []
+        self.sub_category_config = {
+            "sub_category_1": [
+                {
+                    "ComponentDataKey": "assest_details_tile",
+                    "componentType": "type_1",
+                    "ComponentName": "Component1",
+                    "ComponentCategory": "Category1"
+                }
+            ]
+        }
+        self.data_mapping = {
+            "assest_details_tile": ["data1", "data2"],
+            "goals": ["goal1"],
+            "account_details": []
+        }
+        self.category_mapping = {
+            "assest_details_tile": "Category1"
+        }
+        self.llm_output = {
+            "status_code": 200,
+            "plan_level_results": [
+                {
+                    "category": "Category1",
+                    "sub_category": "SubCategory1",
+                    "Insights": [
+                        {"Insight": "Test insight 1"}
+                    ],
+                    "summaries": [
+                        {"summary": "Test summary 1"}
+                    ]
+                }
+            ],
+            "goal_level_results": []
+        }
+        self.input_list = ["eci", ["data1", "data2"], ["goal1"], [], [], [], [], []]
+        self.eci_id = "test_eci"
+        self.package_id = "test_package"
+        self.agent = "test_agent"
+
+    def test_append_component(self):
+        sub_category_data = {"components": []}
+        append_component(sub_category_data, "type_1", "Component1", "Category1", ["data1"])
+        self.assertEqual(len(sub_category_data["components"]), 1)
+
+    def test_find_or_create_category(self):
+        category = find_or_create_category(self.categories, "Category1")
+        self.assertEqual(category["categoryName"], "Category1")
+        self.assertEqual(len(self.categories), 1)
+
+    def test_find_or_create_sub_category(self):
+        category = {"subCategories": []}
+        sub_category = find_or_create_sub_category(category, "SubCategory1")
+        self.assertEqual(sub_category["subCategoryName"], "SubCategory1")
+        self.assertEqual(len(category["subCategories"]), 1)
+
+    def test_populate_directly_mapped_data(self):
+        populate_directly_mapped_data(self.categories, self.sub_category_config, self.data_mapping, self.category_mapping)
+        self.assertGreater(len(self.categories), 0)
+
+    def test_append_unique_component(self):
+        sub_category_data = {"components": []}
+        append_unique_component(sub_category_data, "type_1", "Component1", "Category1", ["data1"])
+        self.assertEqual(len(sub_category_data["components"]), 1)
+        append_unique_component(sub_category_data, "type_1", "Component1", "Category1", ["data1"])
+        self.assertEqual(len(sub_category_data["components"]), 1)
+
+    def test_populate_sub_category_unique(self):
+        existing_sub_category = {"components": []}
+        data_item = {
+            "sub_category": "SubCategory1",
+            "Insights": [
+                {"Insight": "Test insight 1"}
+            ],
+            "summaries": [
+                {"summary": "Test summary 1"}
+            ]
+        }
+        result = populate_sub_category_unique(data_item, self.sub_category_config, self.data_mapping, existing_sub_category)
+        self.assertIsNotNone(result)
+        self.assertGreater(len(existing_sub_category["components"]), 0)
+
+    def test_construct_component_fixed_unique(self):
+        result = construct_component_fixed_unique(self.llm_output, self.sub_category_config, self.data_mapping, self.category_mapping, self.eci_id, self.package_id, self.agent)
+        self.assertEqual(result["status_code"], 200)
+        self.assertGreater(len(result["categories"]), 0)
+
+    def test_process_llm_output_data(self):
+        result = process_llm_output_data(self.llm_output, self.input_list, self.eci_id, self.package_id, self.agent)
+        self.assertEqual(result["status_code"], 200)
+        self.assertGreater(len(result["categories"]), 0)
+
+if __name__ == "__main__":
+    unittest.main()
