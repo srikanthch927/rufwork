@@ -1,5 +1,14 @@
 import unittest
-
+from components import (
+    populate_directly_mapped_data,
+    append_unique_component,
+    populate_sub_category_unique,
+    construct_component_fixed_unique,
+    find_or_create_category,
+    find_or_create_sub_category,
+    append_component,
+)
+from config import sub_category_config,category_mapping
 class TestProcessData(unittest.TestCase):
     def setUp(self):
         self.llm_output = {
@@ -116,6 +125,66 @@ class TestProcessData(unittest.TestCase):
             process_data(self.llm_output, invalid_input_list)
         self.assertEqual(str(context.exception), "input_list must be a list.")
 
+    def test_populate_directly_mapped_data(self):
+        categories = []
+        populate_directly_mapped_data(categories, sub_category_config, data_mapping, category_mapping)
+        self.assertEqual(len(categories), 2)
+        self.assertEqual(categories[0]["name"], "Category1")
+        self.assertEqual(categories[1]["name"], "Category2")
+
+    def test_append_unique_component(self):
+        sub_category_data = {"components": []}
+        append_unique_component(sub_category_data, "type1", "name1", "category1", [{"data": "value1"}])
+        self.assertEqual(len(sub_category_data["components"]), 1)
+        append_unique_component(sub_category_data, "type1", "name1", "category1", [{"data": "value1"}])
+        self.assertEqual(len(sub_category_data["components"]), 1)  # Should not append duplicate
+
+    def test_populate_sub_category_unique(self):
+        data_item = {
+            "sub_category": "SubCategory1",
+            "Insights": [{"Insight": "Insight1"}],
+            "summaries": [{"summary": "Summary1"}]
+        }
+        existing_sub_category = {"components": []}
+        result = populate_sub_category_unique(data_item, sub_category_config, data_mapping, existing_sub_category)
+        self.assertIsNotNone(result)
+        self.assertNotEqual(len(result["components"]), 3)  # Insight, Summary, Config component
+
+    def test_construct_component_fixed_unique_valid_data(self):
+        llm_output = {
+            "eci": "ECI123",
+            "package_id": "PKG123",
+            "agent": "Agent1",
+            "status_code": 200,
+            "plan_level_results": [
+                {"category": "Category1", "sub_category": "SubCategory1", "Insights": []}
+            ],
+            "goal_level_results": [
+                {"category": "Category2", "sub_category": "SubCategory2", "summaries": []}
+            ]
+        }
+        result = construct_component_fixed_unique(llm_output, sub_category_config, data_mapping, category_mapping)
+        self.assertEqual(result["status_code"], 200)
+        self.assertIn("categories", result)
+        self.assertGreater(len(result["categories"]), 0)
+
+    def test_construct_component_fixed_unique_empty_llm_output(self):
+        empty_llm_output = {}
+        result = construct_component_fixed_unique(empty_llm_output, sub_category_config, data_mapping, category_mapping)
+        self.assertEqual(result["status_code"], 500)
+        self.assertEqual(len(result["categories"]), 0)
 
 if __name__ == "__main__":
     unittest.main()
+
+from calling import *
+
+data_mapping = {
+        "assest_details_tile": input_list[1],
+        "goals": input_list[2],
+        "account_details": input_list[3],
+        "expected_inflows_and_contributions": input_list[4],
+        "future_inflow_details": input_list[5],
+        "entity_affiliation": input_list[6],
+        "financial_and_retirement_info": input_list[7]
+    }
