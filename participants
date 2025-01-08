@@ -1,0 +1,37 @@
+
+def participants_fields(input_data, mappings):
+    participants_data = {'participants': []}
+    input_participants = input_data.get("participants", [])
+    mapping = mappings.get("participants", [])[0]
+
+    for participant in input_participants:
+        transformed_participant = {}
+        
+        # Map simple fields
+        for key, path in mapping.items():
+            if key == "residency_periods":
+                continue  # Skip residency_periods here, handle later
+            
+            field_name = path.split('.')[-1]
+            transformed_participant[key] = participant.get(field_name, None)
+        
+        # Map residency_periods
+        residency_mappings = mapping.get("residency_periods", [])
+        transformed_residency_periods = []
+        for residency in participant.get("residencyPeriods", []):
+            transformed_residency = {}
+            for res_mapping in residency_mappings:
+                for res_key, res_path in res_mapping.items():
+                    res_field_name = res_path.split('.')[-1]
+                    transformed_residency[res_key] = residency.get(res_field_name, None)
+            transformed_residency_periods.append(transformed_residency)
+        
+        transformed_participant["residency_periods"] = transformed_residency_periods
+        participants_data["participants"].append(transformed_participant)
+    
+    print("Participants:", participants_data)
+    return participants_data
+
+
+participants_fields(input_data, mappings)
+
