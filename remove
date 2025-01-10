@@ -1,0 +1,36 @@
+data = {
+    "eci": 1222,
+    "package": 122,
+    "categories": [
+        {
+            "categoryName": "Financail revies",
+            "subcategories": [
+                {
+                    "subcategoryName": "wealth plan - future scernario",
+                    "components": []
+                },
+                {}
+            ]
+        },
+        {}
+    ]
+}
+
+def remove_empty_components(data):
+    if isinstance(data, list):
+        # Recursively process each item in the list
+        return [
+            remove_empty_components(item)
+            for item in data
+            if not (isinstance(item, dict) and "components" in item and item["components"] == [])
+        ]
+    elif isinstance(data, dict):
+        # Recursively process dictionary values
+        return {key: remove_empty_components(value) for key, value in data.items()}
+    return data
+
+# Clean the dictionary
+cleaned_data = remove_empty_components(data)
+
+# Print the result
+print(cleaned_data)
