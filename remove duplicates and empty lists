@@ -1,0 +1,60 @@
+data = {
+    "eci": 1222,
+    "package": 122,
+    "categories": [
+        {
+            "categoryName": "Financail revies",
+            "subcategories": [
+                {
+                    "subcategoryName": "wealth plan - future scernario",
+                    "components": [
+                        {
+                            "componentType": "tile_list",
+                            "ComponentName": "goals",
+                            "ComponentCategory": "Goals",
+                            "ComponentData": ["employee goals"]
+                        },
+                        {
+                            "componentType": "tile_list",
+                            "ComponentName": "goals",
+                            "ComponentCategory": "Goals",
+                            "ComponentData": ["employee goals"]
+                        }
+                    ]
+                },
+            ]
+        },
+    ]
+}
+
+def remove_duplicates_and_empty_components(data):
+    if isinstance(data, list):
+        # Recursively process each item in the list
+        cleaned_list = [
+            remove_duplicates_and_empty_components(item)
+            for item in data
+            if not (isinstance(item, dict) and "components" in item and item["components"] == [])
+        ]
+        # Remove duplicate dictionaries while preserving the order
+        unique_list = []
+        for item in cleaned_list:
+            if item not in unique_list:
+                unique_list.append(item)
+        return unique_list
+    elif isinstance(data, dict):
+        # Check if 'components' exists and remove duplicates within it
+        if "components" in data and isinstance(data["components"], list):
+            unique_components = []
+            for component in data["components"]:
+                if component not in unique_components:
+                    unique_components.append(component)
+            data["components"] = unique_components
+        # Recursively process dictionary values
+        return {key: remove_duplicates_and_empty_components(value) for key, value in data.items()}
+    return data
+
+# Clean the dictionary
+cleaned_data = remove_duplicates_and_empty_components(data)
+
+# Print the result
+print(cleaned_data)
