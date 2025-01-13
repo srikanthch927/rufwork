@@ -1,0 +1,131 @@
+import unittest
+from datetime import date, datetime
+from unittest.mock import patch
+
+class TestConstructComponentFixedUnique(unittest.TestCase):
+    def setUp(self):
+        self.default_eci_id = "test_eci_id"
+        self.default_package_id = "test_package_id"
+        self.default_agent = "test_agent"
+        self.default_sub_category_config = {}
+        self.default_data_mapping = {}
+        self.default_category_mapping = {}
+
+    @patch('builtins.print')  # Mock print to suppress debug output during tests
+    def test_normal_input(self, mock_print):
+        llm_output = {
+            "plan_level_results": [
+                {
+                    "category": "Category A",
+                    "sub_category": "Subcategory 1",
+                    "Insights": [{"Insight": "Insight 1"}],
+                    "summaries": [{"summary": "Summary 1"}]
+                }
+            ],
+            "goal_level_results": [
+                {
+                    "category": "Category B",
+                    "sub_category": "Subcategory 2",
+                    "Insights": [{"Insight": "Insight 2"}],
+                    "summaries": [{"summary": "Summary 2"}]
+                }
+            ]
+        }
+
+        result = construct_component_fixed_unique(
+            llm_output,
+            self.default_sub_category_config,
+            self.default_data_mapping,
+            self.default_category_mapping,
+            self.default_eci_id,
+            self.default_package_id,
+            self.default_agent
+        )
+
+        self.assertEqual(result['eci'], self.default_eci_id)
+        self.assertEqual(result['package_id'], self.default_package_id)
+        self.assertEqual(result['agent'], self.default_agent)
+        self.assertEqual(len(result['categories']), 2)
+
+    @patch('builtins.print')  # Mock print to suppress debug output during tests
+    def test_empty_llm_output(self, mock_print):
+        llm_output = {}
+
+        result = construct_component_fixed_unique(
+            llm_output,
+            self.default_sub_category_config,
+            self.default_data_mapping,
+            self.default_category_mapping,
+            self.default_eci_id,
+            self.default_package_id,
+            self.default_agent
+        )
+
+        self.assertEqual(result['categories'], [])
+
+    @patch('builtins.print')  # Mock print to suppress debug output during tests
+    def test_missing_category_and_subcategory(self, mock_print):
+        llm_output = {
+            "plan_level_results": [
+                {
+                    "Insights": [{"Insight": "No Category Insight"}],
+                    "summaries": [{"summary": "No Category Summary"}]
+                }
+            ]
+        }
+
+        result = construct_component_fixed_unique(
+            llm_output,
+            self.default_sub_category_config,
+            self.default_data_mapping,
+            self.default_category_mapping,
+            self.default_eci_id,
+            self.default_package_id,
+            self.default_agent
+        )
+
+        self.assertEqual(len(result['categories']), 1)
+        self.assertEqual(result['categories'][0]['name'], "Default Category")
+        self.assertEqual(len(result['categories'][0]['sub_categories']), 1)
+        self.assertEqual(result['categories'][0]['sub_categories'][0]['name'], "Default Subcategory")
+
+    @patch('builtins.print')  # Mock print to suppress debug output during tests
+    def test_exception_handling(self, mock_print):
+        llm_output = None  # Invalid input
+
+        with self.assertRaises(Exception):
+            construct_component_fixed_unique(
+                llm_output,
+                self.default_sub_category_config,
+                self.default_data_mapping,
+                self.default_category_mapping,
+                self.default_eci_id,
+                self.default_package_id,
+                self.default_agent
+            )
+
+    @patch('builtins.print')  # Mock print to suppress debug output during tests
+    def test_directly_mapped_data_handling(self, mock_print):
+        llm_output = {
+            "plan_level_results": [],
+            "goal_level_results": []
+        }
+
+        sub_category_config = {"Category A": ["Subcategory 1"]}
+        data_mapping = {}
+        category_mapping = {}
+
+        result = construct_component_fixed_unique(
+            llm_output,
+            sub_category_config,
+            data_mapping,
+            category_mapping,
+            self.default_eci_id,
+            self.default_package_id,
+            self.default_agent
+        )
+
+        self.assertEqual(result['categories'], [])
+
+if __name__ == "__main__":
+    unittest.main()
