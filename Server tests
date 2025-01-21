@@ -1,0 +1,92 @@
+from fastapi import FastAPI
+from datetime import datetime
+
+app = FastAPI()
+
+@app.get("/investment-info-agent")
+async def investment_info_agent(
+    eci: int, 
+    package_id: str, 
+    account_id: str, 
+    trailing_period: str, 
+    request_type: str
+):
+    try:
+        start_time = datetime.now()
+        eci_id = str(eci).zfill(10)
+
+        # Log request received
+        print(f"Request received for ECI: {eci_id} at Time: {start_time.strftime('%Y-%m-%d %H:%M:%S.%f')}")
+
+        # Example logic based on request type
+        if request_type == "chart":
+            if trailing_period in ("YTD", "MAX", "12M", "36M", "60M"):
+                # Simulating API call for investment info
+                invest_info_response = await get_api_response(
+                    "market_value_api", 
+                    "INVESTMENT_INFO", 
+                    eci_id, 
+                    package_id, 
+                    account_id, 
+                    trailing_period
+                )
+                
+                if isinstance(invest_info_response, (dict, list)):
+                    if not invest_info_response.get("accountData"):
+                        # Log no data found
+                        print(f"No data found for ECI: {eci_id} at Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}")
+                        return {
+                            "eci": eci_id,
+                            "package_id": package_id,
+                            "agent": "TECH_AGENT",
+                            "status_code": "NO_DATA_FOUND",
+                            "description": "No data found"
+                        }
+                    
+                    market_value = invest_info_response.get("accountData", {}).get("marketValue", {})
+                    # Process and transform data if needed
+                    print(f"Market value chart generated: {market_value} at Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}")
+                    
+                    output_json = {
+                        "eci": eci_id,
+                        "package_id": package_id,
+                        "agent": "TECH_AGENT",
+                        "market_value": market_value,
+                        "account_id": account_id,
+                        "trailing_period": trailing_period
+                    }
+                    
+                    print(f"Output JSON generated: {output_json}")
+                    return output_json
+                
+                else:
+                    print(f"Invalid response format for ECI: {eci_id}")
+                    return {"error": "Invalid response format"}
+
+            else:
+                print(f"Invalid trailing period: {trailing_period}")
+                return {"error": "Invalid trailing period"}
+        else:
+            print(f"Invalid request type: {request_type}")
+            return {"error": "Invalid request type"}
+
+    except Exception as e:
+        print(f"ApplicationError: Unable to complete the process for ECI: {eci_id}, error: {str(e)}")
+        return {"ApplicationError": "Unable to complete the process. Verify logs for details."}
+
+    finally:
+        end_time = datetime.now()
+        total_time = (end_time - start_time).total_seconds()
+        print(f"Total Time taken: {total_time} seconds")
+
+# Dummy API call function
+async def get_api_response(api_name, api_type, eci_id, package_id, account_id, trailing_period):
+    # Simulate API call and return a mock response
+    return {
+        "accountData": {
+            "marketValue": {
+                "value": 12345.67,
+                "currency": "USD"
+            }
+        }
+    }
