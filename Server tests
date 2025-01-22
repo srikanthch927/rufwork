@@ -89,37 +89,54 @@ async def get_api_response(api_name, api_type, eci_id, package_id, account_id, t
                 "currency": "USD"
             }
 
-
-
-@pytest.mark.asyncio
-async def test_valid_chart_request():
-    with patch("app.main.get_api_response", new_callable=AsyncMock) as mock_get_api_response:
-        mock_get_api_response.return_value = {
-            "accountData": {
-                "marketValue": {
-                    "value": 12345.67,
-                    "currency": "USD"
-                }
+ @pytest.mark.asyncio
+async def test_investment_info_agent():
+    # Mock responses
+    mock_api_response = {
+        "accountData": {
+            "marketValue": {
+                "value": 12345.67,
+                "currency": "USD"
             }
         }
-        response = client.get(
-            "/investment-info-agent",
-            params={
-                "eci": 12345,
-                "package_id": "PKG123",
-                "account_id": "ACC456",
-                "trailing_period": "YTD",
-                "request_type": "chart",
-            },
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["eci"] == "0000012345"
-        assert data["package_id"] == "PKG123"
-        assert data["market_value"] == {
+    }
+    mock_transformed_data = {
+        "market_value": {
             "value": 12345.67,
             "currency": "USD"
         }
-
-        }
     }
+
+    # Patch the get_api_response and transform_keys functions
+    with patch('main.get_api_response', new=AsyncMock(return_value=mock_api_response)) as mock_get_api_response:
+        with patch('main.transform_keys', return_value=mock_transformed_data) as mock_transform_keys:
+            async with AsyncClient(app=app, base_url="http://test") as client:
+                response = await client.get(
+                    "/investment-info-agent",
+                    params={
+                        "eci": 12345,
+                        "package_id": "PKG123",
+                        "account_id": "ACC456",
+                        "trailing_period": "YTD",
+                        "request_type": "chart",
+                    }
+                )
+
+            # Assertions
+            assert response.status_code == 200
+            data = response.json()
+            assert data["eci"] == "0000012345"
+            assert data["package_id"] == "PKG123"
+            assert data["agent"] == "TECH_AGENT"
+            assert data["market_value"] == mock_transformed_data["market_value"]
+
+            # Ensure the mocked functions were called with expected arguments
+            mock_get_api_response.assert_awaited_once_with(
+                "market_value_api",
+                "INVESTMENT_INFO",
+                "0000012345",
+                "PKG123",
+                "ACC456",
+                "YTD"
+            )
+            mock_transform_keys.assert_called_once_with(mock_api_response["accountData"])
