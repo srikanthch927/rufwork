@@ -88,5 +88,38 @@ async def get_api_response(api_name, api_type, eci_id, package_id, account_id, t
                 "value": 12345.67,
                 "currency": "USD"
             }
+
+
+
+@pytest.mark.asyncio
+async def test_valid_chart_request():
+    with patch("app.main.get_api_response", new_callable=AsyncMock) as mock_get_api_response:
+        mock_get_api_response.return_value = {
+            "accountData": {
+                "marketValue": {
+                    "value": 12345.67,
+                    "currency": "USD"
+                }
+            }
+        }
+        response = client.get(
+            "/investment-info-agent",
+            params={
+                "eci": 12345,
+                "package_id": "PKG123",
+                "account_id": "ACC456",
+                "trailing_period": "YTD",
+                "request_type": "chart",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["eci"] == "0000012345"
+        assert data["package_id"] == "PKG123"
+        assert data["market_value"] == {
+            "value": 12345.67,
+            "currency": "USD"
+        }
+
         }
     }
