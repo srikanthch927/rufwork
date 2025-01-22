@@ -118,3 +118,37 @@ def test_get_api_response_exception():
 
             # Assert that the function returns None
             assert response is None
+
+
+
+
+import pytest
+from unittest.mock import patch, Mock
+
+def test_get_api_response_exception():
+    endpoint = "https://mock-endpoint.com"
+    api_name = "TestAPI"
+    eci_id = "test_eci"
+    package_id = "test_package"
+    account_id = "12345"
+    trailing_period = "7d"
+
+    # Mock the requests.post to raise an exception
+    with patch("module_name.requests.post") as mock_post:
+        # Simulate an exception being raised by requests.post
+        mock_post.side_effect = Exception("Mocked request exception")
+
+        # Mock the log_message function to capture logs
+        with patch("module_name.log_message") as mock_log:
+            # Call the function
+            response = get_api_response(endpoint, api_name, eci_id, package_id, account_id, trailing_period)
+
+            # Assert that the log_message function was called with the exception log
+            mock_log.assert_any_call(
+                f"For {api_name} API response code is Mocked request exception and Exception as e at Time: ",
+                # This checks if the exception message was logged correctly (ignoring time details).
+                any=True,
+            )
+
+            # Assert that the function returns None when an exception occurs
+            assert response is None
