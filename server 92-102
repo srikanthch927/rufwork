@@ -1,0 +1,92 @@
+import unittest
+from unittest.mock import patch, MagicMock
+import pandas as pd
+import json
+from datetime import datetime
+
+class TestInvestmentInfoAgentCall(unittest.TestCase):
+
+    @patch('your_module_name.log_message')
+    @patch('your_module_name.write_logs_to_rds')
+    @patch('your_module_name.get_unique_component_df')
+    @patch('your_module_name.JSONResponse')
+    def test_valid_table_request(self, mock_JSONResponse, mock_get_unique_component_df, mock_write_logs_to_rds, mock_log_message):
+        # Mock input
+        eci_id = 12345
+        package_id = "PKG001"
+        account_id = "ACC001"
+        trailing_period = "12M"
+        request_type = "table"
+
+        # Mock DataFrame
+        mock_df = pd.DataFrame({
+            "account_id": ["ACC001", "ACC002"],
+            "accountName": ["Account 1", "Account 2"],
+            "taxType": ["Type 1", "Type 2"],
+            "productOrStrategy": ["Strategy 1", "Strategy 2"],
+            "current_value": [1000, 2000],
+        })
+        mock_get_unique_component_df.return_value = mock_df
+
+        # Mock JSONResponse
+        mock_JSONResponse.return_value = {"response": "mock_response"}
+
+        # Call the function
+        from your_module_name import investment_info_agent_call
+        response = investment_info_agent_call(eci_id, package_id, account_id, trailing_period, request_type)
+
+        # Validate
+        expected_output = {
+            "investment_account_summary": mock_df.to_dict("records"),
+            "eci_id": eci_id,
+            "package_id": package_id,
+            "trailing_period": trailing_period,
+        }
+        mock_JSONResponse.assert_called_once_with(json.dumps(expected_output, indent=4))
+        mock_log_message.assert_called()
+        mock_write_logs_to_rds.assert_called()
+
+    @patch('your_module_name.log_message')
+    @patch('your_module_name.write_logs_to_rds')
+    @patch('your_module_name.get_unique_component_df')
+    @patch('your_module_name.JSONResponse')
+    def test_empty_dataframe(self, mock_JSONResponse, mock_get_unique_component_df, mock_write_logs_to_rds, mock_log_message):
+        # Mock input
+        eci_id = 12345
+        package_id = "PKG001"
+        account_id = "ACC001"
+        trailing_period = "12M"
+        request_type = "table"
+
+        # Mock empty DataFrame
+        mock_df = pd.DataFrame()
+        mock_get_unique_component_df.return_value = mock_df
+
+        # Call the function
+        from your_module_name import investment_info_agent_call
+        response = investment_info_agent_call(eci_id, package_id, account_id, trailing_period, request_type)
+
+        # Validate
+        mock_JSONResponse.assert_not_called()  # No response should be generated
+        mock_log_message.assert_called()
+        mock_write_logs_to_rds.assert_called()
+
+    @patch('your_module_name.log_message')
+    def test_invalid_request_type(self, mock_log_message):
+        # Mock input
+        eci_id = 12345
+        package_id = "PKG001"
+        account_id = "ACC001"
+        trailing_period = "12M"
+        request_type = "invalid_type"
+
+        # Call the function
+        from your_module_name import investment_info_agent_call
+        with self.assertRaises(KeyError):  # Assuming KeyError will be raised for invalid request type
+            investment_info_agent_call(eci_id, package_id, account_id, trailing_period, request_type)
+
+        # Validate
+        mock_log_message.assert_called()
+
+if __name__ == "__main__":
+    unittest.main()
