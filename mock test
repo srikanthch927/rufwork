@@ -23,6 +23,9 @@ async def test_investment_info_agent():
 
     # Patch the get_api_response and transform_keys functions
     with patch('main.get_api_response', new_callable=AsyncMock) as mock_get_api_response:
+
+
+
         mock_get_api_response.return_value = mock_api_response
         with patch('main.transform_keys', return_value=mock_transformed_data) as mock_transform_keys:
             async with AsyncClient(app=app, base_url="http://test") as client:
@@ -83,4 +86,35 @@ def test_get_api_response_exception():
             mock_log.assert_called_with(f"For {api_name} API response code is Mocked request exception and Exception as e at Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
             # Assert that response is None (or adjust based on your function's return value on exceptions)
+            assert response is None
+
+
+
+
+import pytest
+from unittest.mock import patch, Mock
+
+def test_get_api_response_exception():
+    endpoint = "https://mock-endpoint.com"
+    api_name = "TestAPI"
+    eci_id = "test_eci"
+    package_id = "test_package"
+    trailing_period = "7d"
+    account_id = "12345"
+
+    # Mock the requests.post to raise an exception
+    with patch("module_name.requests.post") as mock_post:
+        mock_post.side_effect = Exception("Mocked request exception")
+
+        # Mock the log_message function
+        with patch("module_name.log_message") as mock_log:
+            # Call the function
+            response = get_api_response(endpoint, api_name, eci_id, package_id, account_id, trailing_period)
+
+            # Assert that the exception is logged
+            mock_log.assert_any_call(
+                f"For {api_name} API response code is Mocked request exception and Exception as e at Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+
+            # Assert that the function returns None
             assert response is None
