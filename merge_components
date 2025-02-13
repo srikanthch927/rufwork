@@ -1,0 +1,49 @@
+import json
+from collections import defaultdict
+
+def merge_duplicate_categories(data):
+    merged_categories = []
+    category_map = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {"displayText": ""})))
+    
+    for category in data["categories"]:
+        cat_name = category["categoryName"]
+        for subcategory in category["subCategories"]:
+            subcat_name = subcategory["subCategoryName"]
+            
+            for component in subcategory["components"]:
+                comp_name = component["ComponentName"]
+                for item in component["ComponentData"]:
+                    if category_map[cat_name][subcat_name][comp_name]["displayText"]:
+                        category_map[cat_name][subcat_name][comp_name]["displayText"] += "<br>" + item["displayText"]
+                    else:
+                        category_map[cat_name][subcat_name][comp_name]["displayText"] = item["displayText"]
+    
+    for cat_name, subcats in category_map.items():
+        subcategories = []
+        for subcat_name, components in subcats.items():
+            component_list = []
+            for comp_name, comp_data in components.items():
+                component_list.append({
+                    "componentType": "text",  # Assuming all components are text
+                    "ComponentName": comp_name,
+                    "ComponentCategory": "",  # Leave empty as not specified how to merge
+                    "ComponentData": [comp_data]
+                })
+            subcategories.append({
+                "subCategoryName": subcat_name,
+                "components": component_list
+            })
+        
+        merged_categories.append({
+            "categoryName": cat_name,
+            "subCategories": subcategories
+        })
+    
+    data["categories"] = merged_categories
+    return data
+
+# Example usage
+json_data = { "eci": 123343, "package_id": "dgfhh44", "agent": "wpkajdk", "status_code": 200, "categories": [ { "categoryName": "Financial mindest", "subCategories": [ { "subCategoryName": "priorities review", "components": [ { "componentType": "text", "ComponentName": "model_insight", "ComponentCategory": "Considerations", "ComponentData": [ { "displayText": "monica plan updated in 200202" } ] }, { "componentType": "text", "ComponentName": "model_summary", "ComponentCategory": "Summaries", "ComponentData": [ { "displayText": "rebecca plan updated in 200202" } ] } ] } ] }, { "categoryName": "Financial Review", "subCategories": [ { "subCategoryName": "Wealth plan future inflows", "components": [ { "componentType": "text", "ComponentName": "model_insight", "ComponentCategory": "Considerations", "ComponentData": [ { "displayText": "in goal level insights" } ] }, { "componentType": "text", "ComponentName": "model_summary", "ComponentCategory": "Summaries", "ComponentData": [ { "displayText": "in goal level" } ] } ] } ] }, { "categoryName": "Financial Review", "subCategories": [ { "subCategoryName": "Wealth plan future inflows", "components": [ { "componentType": "text", "ComponentName": "model_insight", "ComponentCategory": "Considerations", "ComponentData": [ { "displayText": "in goal level insights2" } ] }, { "componentType": "text", "ComponentName": "model_summary", "ComponentCategory": "Summaries", "ComponentData": [ { "displayText": "in goal level2" } ] } ] } ] } ] }
+
+merged_json = merge_duplicate_categories(json_data)
+print(json.dumps(merged_json, indent=4))
