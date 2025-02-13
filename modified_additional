@@ -2,44 +2,53 @@ def additional_fields(input_data, mappings):
     output = {"goal_attr_additional_fields": []}
 
     scenarios = input_data["scenariosList"]
-    analysis_goals = input_data["analysisGoals"]
+    analysis_goals = input_data["analysisGoals"]  # Reference order
 
-    for scenario in scenarios:
-        for goal in scenario["goalFeasibilityResponse"]["goals"]:
-            goal_data = {}
+    for analysis_goal in analysis_goals:
+        goal_type = analysis_goal["goalType"]
+        
+        # Find matching goal in scenarios based on goalType
+        matching_goal = None
+        for scenario in scenarios:
+            for goal in scenario["goalFeasibilityResponse"]["goals"]:
+                if goal["type"] == goal_type:
+                    matching_goal = goal
+                    break
+            if matching_goal:
+                break
 
+        goal_data = {}
+
+        # If a matching goal is found, extract required fields
+        if matching_goal:
             for mapping in mappings["goal_attributes"]:
                 for output_key, path in mapping.items():
                     keys = path.split(".")
+                    value = matching_goal  # Start from the matched goal
                     
-                    goal_type = goal["type"]
-                    analysis_goal = next((ag for ag in analysis_goals if ag["goalType"] == goal_type), None)
+                    for key in keys[1:]:  # Traverse path
+                        if isinstance(value, dict):
+                            value = value.get(key, None)
+                        elif isinstance(value, list):
+                            value = value[0] if value else None
+                        if value is None:
+                            break
+                    
+                    goal_data[output_key] = value
 
-                    if analysis_goal:
-                        value = analysis_goal
-                        for key in keys[1:]:  # Adjusted to correctly access attributes
-                            if isinstance(value, dict):
-                                value = value.get(key, None)
-                            elif isinstance(value, list):
-                                value = value[0] if value else None
-                            if value is None:
-                                break
-                        
-                        goal_data[output_key] = value
+        # Ensure required fields are always present
+        required_fields = ["funding_percent_goal_level", "cash_goal_level", "excess_capital", "current_asset_amt"]
+        for field in required_fields:
+            goal_data.setdefault(field, None)
 
-            # Ensure required fields are always present
-            required_fields = ["funding_percent_goal_level", "cash_goal_level", "excess_capital", "current_asset_amt"]
-            for field in required_fields:
-                goal_data.setdefault(field, None)
+        # Convert values to float if possible
+        for key in goal_data:
+            if goal_data[key] is not None:
+                try:
+                    goal_data[key] = float(goal_data[key])
+                except ValueError:
+                    pass
 
-            # Convert to float if possible
-            for key in goal_data:
-                if goal_data[key] is not None:
-                    try:
-                        goal_data[key] = float(goal_data[key])
-                    except ValueError:
-                        pass
-
-            output["goal_attr_additional_fields"].append(goal_data)
+        output["goal_attr_additional_fields"].append(goal_data)
 
     return output
