@@ -1,0 +1,50 @@
+def process_goals(input_data, mappings, package_id, eci):
+    output_data = {"goal_attributes": []}
+    
+    if input_data.get("analysisGoals"):
+        for goal in input_data["analysisGoals"]:
+            transformed_goal = {"goal_id": goal["analysisGoalId"], "goal_periods": []}
+            
+            for mapping in mappings["goal_attributes"]:
+                for output_key, path in mapping.items():
+                    if output_key in ["goal_id", "goal_name", "goal_type", "goal_rank"]:
+                        input_key = path.split(".")[-1]
+                        transformed_goal[output_key] = goal[input_key]
+                    elif output_key in ["goal_owner", "goal_frequency_type_code", "goal_frequency_number_of_years", "bucket_to_goal_relationship"]:
+                        input_key = path.split(".") if isinstance(path, str) else path[0].split(".")
+                        for scenario in input_data["scenariosList"]:
+                            for goal_data in scenario["goals"]:
+                                if transformed_goal["goal_id"] == goal_data["analysisGoalId"]:
+                                    transformed_goal[output_key] = goal_data.get(output_key, None)
+                    elif output_key == "bucket_name":
+                        input_key = path.split(".")
+                        result_list = []
+                        for i in range(len(input_key)):
+                            analysis_bucket_list = input_data.get(input_key[i], [])
+                            for data_dict in analysis_bucket_list:
+                                result_list.append(data_dict.get(input_key[i + 1], None))
+                            break
+                        transformed_goal[output_key] = result_list
+                    
+            for scenario in input_data["scenariosList"]:
+                for goal_data in scenario["goals"]:
+                    if goal_data["analysisGoalId"] == transformed_goal["goal_id"]:
+                        for goal_period in goal_data.get("goalPeriods", []):
+                            period_data = {}
+                            for period_mapping in mappings["goal_attributes"][0].get("goal_periods", []):
+                                for period_key, period_path in period_mapping.items():
+                                    period_keys = period_path.split(".")
+                                    value = goal_period
+                                    for key in period_keys[-1:]:
+                                        value = value.get(key, None)
+                                    if period_key in ["annual_amount", "monthly_amount"] and value:
+                                        try:
+                                            value = float(value)
+                                        except (ValueError, TypeError):
+                                            value = None
+                                    period_data[period_key] = value
+                            transformed_goal["goal_periods"].append(period_data)
+            
+            output_data["goal_attributes"].append(transformed_goal)
+    
+    return output_data
