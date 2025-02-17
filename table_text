@@ -1,0 +1,64 @@
+import json
+from collections import defaultdict
+
+def merge_duplicate_categories(data):
+    merged_categories = []
+    category_map = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {"displayText": "", "otherData": []})))
+    non_text_components = defaultdict(lambda: defaultdict(list))
+    
+    for category in data["categories"]:
+        cat_name = category["categoryName"]
+        for subcategory in category["subCategories"]:
+            subcat_name = subcategory["subCategoryName"]
+            
+            for component in subcategory["components"]:
+                comp_name = component["ComponentName"]
+                if component["componentType"] == "text":
+                    for item in component["ComponentData"]:
+                        if "displayText" in item:
+                            if category_map[cat_name][subcat_name][comp_name]["displayText"]:
+                                category_map[cat_name][subcat_name][comp_name]["displayText"] += "<br>" + item["displayText"]
+                            else:
+                                category_map[cat_name][subcat_name][comp_name]["displayText"] = item["displayText"]
+                        else:
+                            category_map[cat_name][subcat_name][comp_name]["otherData"].append(item)
+                else:
+                    non_text_components[cat_name][subcat_name].append(component)
+    
+    for cat_name, subcats in category_map.items():
+        subcategories = []
+        for subcat_name, components in subcats.items():
+            component_list = []
+            for comp_name, comp_data in components.items():
+                component_data_list = []
+                if comp_data["displayText"]:
+                    component_data_list.append({"displayText": comp_data["displayText"]})
+                component_data_list.extend(comp_data["otherData"])
+                
+                component_list.append({
+                    "componentType": "text",  # Only merging text components
+                    "ComponentName": comp_name,
+                    "ComponentCategory": "",  # Leave empty as not specified how to merge
+                    "ComponentData": component_data_list
+                })
+            
+            component_list.extend(non_text_components[cat_name][subcat_name])  # Add non-text components unchanged
+            
+            subcategories.append({
+                "subCategoryName": subcat_name,
+                "components": component_list
+            })
+        
+        merged_categories.append({
+            "categoryName": cat_name,
+            "subCategories": subcategories
+        })
+    
+    data["categories"] = merged_categories
+    return data
+
+# Example usage
+json_data = { "eci": 123343, "package_id": "dgfhh44", "agent": "wpkajdk", "status_code": 200, "categories": [ { "categoryName": "Financial mindest", "subCategories": [ { "subCategoryName": "priorities review", "components": [ { "componentType": "text", "ComponentName": "model_insight", "ComponentCategory": "Considerations", "ComponentData": [ { "displayText": "monica plan updated in 200202" } ] }, { "componentType": "text", "ComponentName": "model_summary", "ComponentCategory": "Summaries", "ComponentData": [ { "displayText": "rebecca plan updated in 200202" } ] } ] } ] }, { "categoryName": "Financial Review", "subCategories": [ { "subCategoryName": "Wealth plan future inflows", "components": [ { "componentType": "text", "ComponentName": "model_insight", "ComponentCategory": "Considerations", "ComponentData": [ { "displayText": "in goal level insights" } ] }, { "componentType": "table", "ComponentName": "account_details", "ComponentCategory": "Summaries", "ComponentData": [ { "Name":"Bank accounts", "external":1111 } ] }, { "componentType": "text", "ComponentName": "model_summary", "ComponentCategory": "Summaries", "ComponentData": [ { "displayText": "in goal level" } ] } ] } ] }, { "categoryName": "Financial Review", "subCategories": [ { "subCategoryName": "Wealth plan future inflows", "components": [ { "componentType": "text", "ComponentName": "model_insight", "ComponentCategory": "Considerations", "ComponentData": [ { "displayText": "in goal level insights2" } ] }, { "componentType": "text", "ComponentName": "model_summary", "ComponentCategory": "Summaries", "ComponentData": [ { "displayText": "in goal level2" } ] } ] } ] } ] }
+
+merged_json = merge_duplicate_categories(json_data)
+print(json.dumps(merged_json, indent=4))
