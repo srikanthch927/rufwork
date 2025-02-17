@@ -1,0 +1,61 @@
+import json
+from collections import defaultdict
+
+def merge_duplicate_categories(data):
+    merged_categories = []
+    category_map = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {"displayText": "", "otherData": [], "componentType": None, "componentCategory": None})))
+    
+    for category in data["categories"]:
+        cat_name = category["categoryName"]
+        for subcategory in category["subCategories"]:
+            subcat_name = subcategory["subCategoryName"]
+            
+            for component in subcategory["components"]:
+                comp_name = component["ComponentName"]
+                comp_type = component.get("componentType", "text")
+                comp_category = component.get("ComponentCategory", "")
+                
+                if category_map[cat_name][subcat_name][comp_name]["componentType"] is None:
+                    category_map[cat_name][subcat_name][comp_name]["componentType"] = comp_type
+                
+                if category_map[cat_name][subcat_name][comp_name]["componentCategory"] is None:
+                    category_map[cat_name][subcat_name][comp_name]["componentCategory"] = comp_category
+                
+                for item in component["ComponentData"]:
+                    if "displayText" in item:
+                        if category_map[cat_name][subcat_name][comp_name]["displayText"]:
+                            category_map[cat_name][subcat_name][comp_name]["displayText"] += "<br>" + item["displayText"]
+                        else:
+                            category_map[cat_name][subcat_name][comp_name]["displayText"] = item["displayText"]
+                    else:
+                        category_map[cat_name][subcat_name][comp_name]["otherData"].append(item)
+    
+    for cat_name, subcats in category_map.items():
+        subcategories = []
+        for subcat_name, components in subcats.items():
+            component_list = []
+            for comp_name, comp_data in components.items():
+                component_data_list = []
+                if comp_data["displayText"]:
+                    component_data_list.append({"displayText": comp_data["displayText"]})
+                component_data_list.extend(comp_data["otherData"])
+                
+                component_list.append({
+                    "componentType": comp_data["componentType"],
+                    "ComponentName": comp_name,
+                    "ComponentCategory": comp_data["componentCategory"],
+                    "ComponentData": component_data_list
+                })
+            subcategories.append({
+                "subCategoryName": subcat_name,
+                "components": component_list
+            })
+        
+        merged_categories.append({
+            "categoryName": cat_name,
+            "subCategories": subcategories
+        })
+    
+    data["categories"] = merged_categories
+    return data
+
